@@ -1,14 +1,13 @@
-from flask import Flask
-from flask_restful import Resource, Api
+from sanic import Sanic
+from sanic.response import json
 
-app = Flask(__name__)
-api = Api(app)
+app = Sanic()
 
-class HelloWorld(Resource):
-    def get(self):
-        return {'hello': 'world'}
 
-api.add_resource(HelloWorld, '/')
+@app.route("/")
+async def hello(request):
+    return json({"hello": "world"})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

@@ -5,10 +5,10 @@ name = "pypi"
 
 [dev-packages]
 pylint = "*"
+yapf = "*"
 
 [packages]
-flask = "*"
-flask-restful = "*"
+sanic = "*"
 
 [requires]
 python_version = "3.6"
