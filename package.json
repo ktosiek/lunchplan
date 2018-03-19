@@ -1,0 +1,23 @@
+{
+  "name": "lunchplan",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "dependencies": {
+    "elm": "^0.18.0",
+    "elm-analyse": "^0.13.3",
+    "elm-format": "^0.6.1-alpha",
+    "elm-hot-loader": "^0.5.4",
+    "elm-webpack-loader": "^4.5.0",
+    "file-loader": "^1.1.11",
+    "foreman": "^2.0.0",
+    "webpack": "3",
+    "webpack-cli": "2.0.9",
+    "webpack-dev-server": "2"
+  },
+  "scripts": {
+    "build": "webpack -p",
+    "client": "webpack-dev-server --hot --port 3000",
+    "start": "nf start"
+  }
+}
