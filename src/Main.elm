@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (Html, div, program, text)
 import Html.Attributes exposing (href)
 import Dict exposing (Dict)
+import Dict.Extra as Dict
 import Bootstrap.CDN as CDN
 import Bootstrap.Card as Card
 import Bootstrap.Card.Block as Block
@@ -23,6 +24,11 @@ type OrderStatus
     = Proposed
     | Championed
     | Ordered
+
+
+allOrderStatuses : List OrderStatus
+allOrderStatuses =
+    [ Ordered, Championed, Proposed ]
 
 
 type alias Order =
@@ -79,6 +85,23 @@ init =
                           }
                         ]
                   , status = Championed
+                  }
+                , { place =
+                        { name = "Chicago's Pizza"
+                        , description = "Na przeciwko"
+                        , link = "TODO"
+                        }
+                  , positions =
+                        [ { participant = { name = "Piesio Grzesio" }
+                          , champion = False
+                          , description = "Texas"
+                          }
+                        , { participant = { name = "Kot Psot" }
+                          , champion = True
+                          , description = "Cztery sery"
+                          }
+                        ]
+                  , status = Ordered
                   }
                 , { place =
                         { name = "TeleSajgon"
@@ -140,7 +163,7 @@ init =
 
 view : Model -> Html Msg
 view model =
-    Html.div []
+    Html.div [] <|
         [ CDN.stylesheet
         , Navbar.config NavbarMsg
             |> Navbar.withAnimation
@@ -150,10 +173,50 @@ view model =
             -- Customize coloring
             |> Navbar.brand [ href "#" ] [ text "LunchPlan" ]
             |> Navbar.view model.navbar
-        , model.orders
-            |> List.map orderCard
-            |> flip List.append [ newOrderCard ]
-            |> cardsList
+        ]
+            ++ (model.orders
+                    |> groupOrdersByStatus
+                    |> List.map orderCardLane
+               )
+            ++ [ cardsList [ newOrderCard ]
+               ]
+
+
+groupOrdersByStatus : List Order -> List ( OrderStatus, List Order )
+groupOrdersByStatus orders =
+    let
+        groups =
+            Dict.groupBy
+                (.status >> toString)
+                orders
+    in
+        allOrderStatuses
+            |> List.map
+                (\s ->
+                    ( s
+                    , Dict.get (toString s) groups |> Maybe.withDefault []
+                    )
+                )
+
+
+statusName : OrderStatus -> String
+statusName status =
+    case status of
+        Ordered ->
+            "Zamówione"
+
+        Championed ->
+            "Są chętni do złożenia zamówienia"
+
+        Proposed ->
+            "Zaproponowane"
+
+
+orderCardLane : ( OrderStatus, List Order ) -> Html Msg
+orderCardLane ( status, orders ) =
+    div []
+        [ Html.h3 [] [ text (statusName status) ]
+        , orders |> List.map orderCard |> cardsList
         ]
 
 
