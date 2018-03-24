@@ -18,6 +18,10 @@
   "scripts": {
     "build": "webpack -p",
     "client": "webpack-dev-server --hot --port 3000",
-    "start": "nf start"
+    "start": "nf start",
+    "test": "elm-test"
+  },
+  "devDependencies": {
+    "elm-test": "^0.18.12"
   }
 }
