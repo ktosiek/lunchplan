@@ -17,6 +17,7 @@ import Bootstrap.Utilities.Spacing as Spacing
 type alias Model =
     { navbar : Navbar.State
     , orders : List Order
+    , user : Participant
     }
 
 
@@ -46,7 +47,13 @@ type alias Position =
 
 
 type alias Participant =
-    { name : String }
+    { name : String
+    , id : ParticipantId
+    }
+
+
+type ParticipantId
+    = ParticipantId String
 
 
 type alias Place =
@@ -68,6 +75,7 @@ init =
             Navbar.initialState NavbarMsg
     in
         ( { navbar = navbarState
+          , user = { name = "Piesio Grzesio", id = ParticipantId "pg" }
           , orders =
                 [ { place =
                         { name = "Chicago's Pizza"
@@ -75,11 +83,11 @@ init =
                         , link = "TODO"
                         }
                   , positions =
-                        [ { participant = { name = "Piesio Grzesio" }
+                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = False
                           , description = "Texas"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = True
                           , description = "Cztery sery"
                           }
@@ -92,11 +100,11 @@ init =
                         , link = "TODO"
                         }
                   , positions =
-                        [ { participant = { name = "Piesio Grzesio" }
+                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = False
                           , description = "Texas"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = True
                           , description = "Cztery sery"
                           }
@@ -109,27 +117,27 @@ init =
                         , link = "http://www.telesajgon.pl/ken.html"
                         }
                   , positions =
-                        [ { participant = { name = "Piesio Grzesio" }
+                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = False
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = False
                           , description = "Banan w cieście"
                           }
-                        , { participant = { name = "Piesio Grzesio" }
+                        , { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = False
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = False
                           , description = "Banan w cieście"
                           }
-                        , { participant = { name = "Piesio Grzesio" }
+                        , { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = False
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = False
                           , description = "Banan w cieście"
                           }
@@ -142,11 +150,11 @@ init =
                         , link = "TODO"
                         }
                   , positions =
-                        [ { participant = { name = "Piesio Grzesio" }
+                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
                           , champion = True
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
-                        , { participant = { name = "Kot Psot" }
+                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
                           , champion = False
                           , description = "Banan w cieście"
                           }
@@ -172,13 +180,16 @@ view model =
             |> Navbar.primary
             -- Customize coloring
             |> Navbar.brand [ href "#" ] [ text "LunchPlan" ]
+            |> Navbar.customItems
+                [ Navbar.textItem [] [ text model.user.name ]
+                ]
             |> Navbar.view model.navbar
         ]
             ++ (model.orders
                     |> groupOrdersByStatus
-                    |> List.map orderCardLane
+                    |> List.map (orderCardLane model)
                )
-            ++ [ cardsList [ newOrderCard ]
+            ++ [ cardsList model [ newOrderCard ]
                ]
 
 
@@ -206,30 +217,39 @@ statusName status =
             "Zamówione"
 
         Championed ->
-            "Są chętni do złożenia zamówienia"
+            "Zgłosił się bohater"
 
         Proposed ->
             "Zaproponowane"
 
 
-orderCardLane : ( OrderStatus, List Order ) -> Html Msg
-orderCardLane ( status, orders ) =
+orderCardLane : { a | user : Participant } -> ( OrderStatus, List Order ) -> Html Msg
+orderCardLane model ( status, orders ) =
     div []
         [ Html.h3 [] [ text (statusName status) ]
-        , orders |> List.map orderCard |> cardsList
+        , orders |> List.map (orderCard model) |> cardsList model
         ]
 
 
-cardsList : List (Card.Config Msg) -> Html Msg
-cardsList cards =
+cardsList : { a | user : Participant } -> List (Card.Config Msg) -> Html Msg
+cardsList model cards =
     Grid.containerFluid []
         [ cards
             |> List.map
                 (\c ->
                     Grid.col [ Col.md4 ] [ Card.view c ]
                 )
+            |> listDefault (Grid.col [ Col.xs12 ] [ text "Brak zamówień" ])
             |> Grid.row []
         ]
+
+
+listDefault : a -> List a -> List a
+listDefault a l =
+    if List.isEmpty l then
+        [ a ]
+    else
+        l
 
 
 newOrderCard : Card.Config Msg
@@ -241,8 +261,8 @@ newOrderCard =
             ]
 
 
-orderCard : Order -> Card.Config Msg
-orderCard order =
+orderCard : { a | user : Participant } -> Order -> Card.Config Msg
+orderCard model order =
     Card.config [ Card.attrs [ Spacing.mb3 ] ]
         |> Card.headerH4 []
             [ text order.place.name ]
@@ -256,8 +276,16 @@ orderCard order =
             ]
         |> Card.listGroup
             (order.positions
-                |> List.map orderPosition
-                |> List.map (ListGroup.li [])
+                |> List.map
+                    (\p ->
+                        ListGroup.li
+                            (if p.participant.id == model.user.id then
+                                [ ListGroup.primary ]
+                             else
+                                []
+                            )
+                            (orderPosition p)
+                    )
             )
 
 
