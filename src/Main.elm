@@ -78,7 +78,7 @@ init =
                         , link = "http://www.telesajgon.pl/ken.html"
                         }
                   , positions =
-                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
+                        [ { participant = { name = "j Grzesio", id = ParticipantId "pjg" }
                           , champion = False
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
@@ -94,7 +94,7 @@ init =
                           , champion = False
                           , description = "Banan w cieście"
                           }
-                        , { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
+                        , { participant = { name = "l Grzesio", id = ParticipantId "pgl" }
                           , champion = False
                           , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
                           }
