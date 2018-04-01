@@ -36,7 +36,7 @@ init =
         ( { navbar = navbarState
           , user = { name = "Piesio Grzesio", id = ParticipantId "pg" }
           , positionForm = Nothing
-          , orderForm = Nothing
+          , orderForm = OrderForm.newOrder
           , orders =
                 [ { id = OrderId 1
                   , place =
@@ -154,7 +154,7 @@ view model =
                     |> groupOrdersByStatus
                     |> List.map (orderCardLane model)
                )
-            ++ [ cardsList model [ newOrderCard ]
+            ++ [ cardsList model [ newOrderCard model ]
                ]
 
 
@@ -192,7 +192,7 @@ type alias CardContext a =
     { a
         | user : Participant
         , positionForm : Maybe PositionForm.Model
-        , orderForm : Maybe OrderForm.Model
+        , orderForm : OrderForm.Model
     }
 
 
@@ -225,13 +225,23 @@ listDefault a l =
         l
 
 
-newOrderCard : Card.Config Msg
-newOrderCard =
+newOrderCard : Model -> Card.Config Msg
+newOrderCard model =
     Card.config [ Card.attrs [ Spacing.mb3 ] ]
         |> Card.headerH4 [] [ text "Zaproponuj kolejne miejsce:" ]
-        |> Card.block []
-            [ Block.text [] [ text "TODO: formularz nowego miejsca :-)" ]
-            ]
+        |> (case model.orderForm.orderId of
+                -- Inne zamówienie jest już edytowane
+                Just orderId ->
+                    Card.block []
+                        [ Block.text [] [ text "Zakończ edycję przed dodaniem nowego wpisu" ]
+                        ]
+
+                -- Edytujemy nowe zamówienie
+                Nothing ->
+                    OrderForm.view UpdateOrderForm SaveOrderForm model.orderForm
+                        |> List.map Block.custom
+                        |> Card.block []
+           )
 
 
 orderCard : CardContext a -> Order -> Card.Config Msg
@@ -256,16 +266,13 @@ orderCard model order =
             )
 
 
-orderHeaderOrForm : Order -> Maybe OrderForm.Model -> Card.Config Msg -> Card.Config Msg
-orderHeaderOrForm order mform =
-    mform
-        |> Maybe.andThen
-            (\f ->
-                if f.orderId == order.id then
-                    Just f
-                else
-                    Nothing
-            )
+orderHeaderOrForm : Order -> OrderForm.Model -> Card.Config Msg -> Card.Config Msg
+orderHeaderOrForm order form =
+    (if form.orderId == Just order.id then
+        Just form
+     else
+        Nothing
+    )
         |> Maybe.map
             (OrderForm.view UpdateOrderForm SaveOrderForm
                 >> List.map Block.custom
@@ -373,27 +380,23 @@ update msg model =
         EditOrder orderId ->
             case getOrder orderId model.orders of
                 Just order ->
-                    { model | orderForm = Just <| OrderForm.fromOrder order } ! []
+                    { model | orderForm = OrderForm.fromOrder order } ! []
 
                 Nothing ->
                     model ! []
 
         UpdateOrderForm msg ->
-            (model.orderForm
-                |> Maybe.map (OrderForm.update msg)
-                |> Maybe.map (\form -> { model | orderForm = Just form })
-                |> Maybe.withDefault model
-            )
+            { model | orderForm = OrderForm.update msg model.orderForm }
                 ! []
 
         SaveOrderForm ->
-            (model.orderForm
-                |> Maybe.andThen (OrderForm.validator >> Result.toMaybe)
+            (OrderForm.validator model.orderForm
+                |> Result.toMaybe
                 |> Maybe.map
-                    (\form ->
-                        updateOrder form.orderId (OrderForm.toOrder form) model
+                    (\validForm ->
+                        updateOrder model.orderForm.orderId (OrderForm.toOrder validForm) model
                     )
-                |> Maybe.map (\m -> { m | orderForm = Nothing })
+                |> Maybe.map (\m -> { m | orderForm = OrderForm.newOrder })
                 |> Maybe.withDefault model
             )
                 ! []
@@ -405,14 +408,47 @@ getOrder id orders =
         |> List.head
 
 
-updateOrder : OrderId -> (Order -> Order) -> Model -> Model
+updateOrder : Maybe OrderId -> (Order -> Order) -> Model -> Model
 updateOrder orderId update model =
-    { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
+    case orderId of
+        Just orderId ->
+            { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
+
+        Nothing ->
+            { model | orders = (update (defaultOrder model)) :: model.orders }
+
+
+defaultOrder : Model -> Order
+defaultOrder model =
+    let
+        maxId =
+            model.orders
+                |> List.map (.id >> unOrderId)
+                |> List.maximum
+                |> Maybe.withDefault 0
+
+        newOrderId =
+            OrderId (maxId + 1)
+    in
+        { id = newOrderId
+        , place =
+            { name = ""
+            , link = ""
+            , description = ""
+            }
+        , status = Proposed
+        , positions = []
+        }
+
+
+unOrderId : OrderId -> Int
+unOrderId (OrderId i) =
+    i
 
 
 updatePosition : OrderId -> Position -> Model -> Model
 updatePosition orderId position =
-    updateOrder orderId
+    updateOrder (Just orderId)
         (\order ->
             case List.findIndex (\p -> p.participant.id == position.participant.id) order.positions of
                 Just idx ->

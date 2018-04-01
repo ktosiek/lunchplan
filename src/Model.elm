@@ -11,7 +11,7 @@ type alias Model =
     , orders : List Types.Order
     , user : Participant
     , positionForm : Maybe PositionForm.Model
-    , orderForm : Maybe OrderForm.Model
+    , orderForm : OrderForm.Model
     }
 
 

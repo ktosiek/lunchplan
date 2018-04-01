@@ -15,7 +15,7 @@ import String
 
 
 type alias Model =
-    { orderId : OrderId
+    { orderId : Maybe OrderId
     , name : String
     , link : String
     , description : String
@@ -49,8 +49,7 @@ type Msg
 
 
 type alias ValidForm =
-    { orderId : OrderId
-    , name : String
+    { name : String
     , link : String
     , description : String
     }
@@ -62,7 +61,7 @@ type alias FieldError =
 
 fromOrder : Types.Order -> Model
 fromOrder order =
-    { orderId = order.id
+    { orderId = Just order.id
     , name = order.place.name
     , link = order.place.link
     , description = order.place.description
@@ -71,9 +70,9 @@ fromOrder order =
         |> updateErrors
 
 
-newOrder : OrderId -> Model
-newOrder orderId =
-    { orderId = orderId
+newOrder : Model
+newOrder =
+    { orderId = Nothing
     , name = ""
     , link = ""
     , description = ""
@@ -130,7 +129,6 @@ updateErrors model =
 validator : Validator FieldError Model ValidForm
 validator =
     V.ok ValidForm
-        |> V.keep .orderId
         |> V.verify .name (VString.notBlank ( Name, "Podaj nazwę dostawcy" ))
         |> V.verify .link (isURL ( Link, "Podaj prawidłowy link" ) |> orEmpty)
         |> V.keep .description
