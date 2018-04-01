@@ -11,6 +11,7 @@ import Test.Html.Selector exposing (text, tag, class)
 import Main exposing (..)
 import Fuzzers
 import Bootstrap.Card as Card
+import OrderForm
 
 
 suite : Test
@@ -22,7 +23,7 @@ suite =
                     unsafeFirst order.positions |> .participant
 
                 cardContext =
-                    { user = user, positionForm = Nothing, orderForm = Nothing }
+                    { user = user, positionForm = Nothing, orderForm = OrderForm.newOrder }
             in
                 orderCard cardContext order
                     |> Card.view

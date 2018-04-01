@@ -6,6 +6,7 @@ import Html.Events exposing (onClick)
 import Dict exposing (Dict)
 import Dict.Extra as Dict
 import List.Extra as List
+import Maybe.Extra as Maybe
 import Bootstrap.CDN as CDN
 import Bootstrap.Badge as Badge
 import Bootstrap.Card as Card
@@ -246,24 +247,31 @@ newOrderCard model =
 
 orderCard : CardContext a -> Order -> Card.Config Msg
 orderCard model order =
-    Card.config [ Card.attrs [ Spacing.mb3 ] ]
-        |> orderHeaderOrForm order model.orderForm
-        |> Card.listGroup
-            (order.positions
-                |> List.map
-                    (\p ->
-                        let
-                            isCurrentUser =
-                                p.participant.id == model.user.id
+    let
+        commonListGroupOptions =
+            [ ListGroup.attrs [ Flex.block, Flex.justifyBetween, Flex.alignItemsCenter ] ]
+    in
+        Card.config [ Card.attrs [ Spacing.mb3 ] ]
+            |> orderHeaderOrForm order model.orderForm
+            |> Card.listGroup
+                (order.positions
+                    |> List.map
+                        (\p ->
+                            let
+                                isCurrentUser =
+                                    p.participant.id == model.user.id
 
-                            options =
-                                [ ListGroup.attrs [ Flex.block, Flex.justifyBetween, Flex.alignItemsCenter ] ]
-                                    |> appendIf isCurrentUser [ ListGroup.primary ]
-                        in
-                            ListGroup.li options
-                                (orderPositionOrForm model order.id isCurrentUser p)
-                    )
-            )
+                                options =
+                                    commonListGroupOptions |> appendIf isCurrentUser [ ListGroup.primary ]
+                            in
+                                ListGroup.li options
+                                    (orderPositionOrForm model order.id isCurrentUser p)
+                        )
+                    |> flip List.append
+                        [ ListGroup.li commonListGroupOptions
+                            (newOrderButtonOrForm model order)
+                        ]
+                )
 
 
 orderHeaderOrForm : Order -> OrderForm.Model -> Card.Config Msg -> Card.Config Msg
@@ -296,6 +304,22 @@ orderCardHeader order cardConfig =
                 [ text order.place.description
                 ]
             ]
+
+
+newOrderButtonOrForm : CardContext a -> Order -> List (Html Msg)
+newOrderButtonOrForm model order =
+    if List.member model.user.id <| List.map (.participant >> .id) order.positions then
+        []
+    else
+        model.positionForm
+            |> Maybe.filter (\f -> f.orderId == order.id)
+            |> Maybe.map (PositionForm.view UpdatePositionForm SavePositionForm)
+            |> Maybe.withDefault (newOrderButton order)
+
+
+newOrderButton : Order -> List (Html Msg)
+newOrderButton order =
+    [ Html.button [ onClick (OpenPositionForm order.id) ] [ text "Dołącz do zamówienia" ] ]
 
 
 orderPositionOrForm : CardContext a -> OrderId -> Bool -> Position -> List (Html Msg)
@@ -409,13 +433,33 @@ getOrder id orders =
 
 
 updateOrder : Maybe OrderId -> (Order -> Order) -> Model -> Model
-updateOrder orderId update model =
-    case orderId of
-        Just orderId ->
-            { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
+updateOrder orderId update_ model =
+    let
+        update =
+            update_ >> fixOrderStatus
+    in
+        case orderId of
+            Just orderId ->
+                { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
 
-        Nothing ->
-            { model | orders = (update (defaultOrder model)) :: model.orders }
+            Nothing ->
+                { model | orders = (update (defaultOrder model)) :: model.orders }
+
+
+fixOrderStatus : Order -> Order
+fixOrderStatus order =
+    { order
+        | status =
+            case order.status of
+                Ordered ->
+                    Ordered
+
+                _ ->
+                    if List.any .champion order.positions then
+                        Championed
+                    else
+                        Proposed
+    }
 
 
 defaultOrder : Model -> Order
