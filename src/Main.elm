@@ -2,9 +2,12 @@ module Main exposing (..)
 
 import Html exposing (Html, div, program, text)
 import Html.Attributes exposing (href)
+import Html.Events exposing (onClick)
 import Dict exposing (Dict)
 import Dict.Extra as Dict
+import List.Extra as List
 import Bootstrap.CDN as CDN
+import Bootstrap.Badge as Badge
 import Bootstrap.Card as Card
 import Bootstrap.Card.Block as Block
 import Bootstrap.ListGroup as ListGroup
@@ -12,60 +15,13 @@ import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Navbar as Navbar
 import Bootstrap.Utilities.Spacing as Spacing
-
-
-type alias Model =
-    { navbar : Navbar.State
-    , orders : List Order
-    , user : Participant
-    }
-
-
-type OrderStatus
-    = Proposed
-    | Championed
-    | Ordered
-
-
-allOrderStatuses : List OrderStatus
-allOrderStatuses =
-    [ Ordered, Championed, Proposed ]
+import Bootstrap.Utilities.Flex as Flex
+import Model exposing (..)
+import PositionForm
 
 
 type alias Order =
-    { place : Place
-    , positions : List Position
-    , status : OrderStatus
-    }
-
-
-type alias Position =
-    { participant : Participant
-    , description : String
-    , champion : Bool
-    }
-
-
-type alias Participant =
-    { name : String
-    , id : ParticipantId
-    }
-
-
-type ParticipantId
-    = ParticipantId String
-
-
-type alias Place =
-    { name : String
-    , link : String
-    , description : String
-    }
-
-
-type Msg
-    = NoOp
-    | NavbarMsg Navbar.State
+    Model.Order
 
 
 init : ( Model, Cmd Msg )
@@ -76,8 +32,10 @@ init =
     in
         ( { navbar = navbarState
           , user = { name = "Piesio Grzesio", id = ParticipantId "pg" }
+          , positionForm = Nothing
           , orders =
-                [ { place =
+                [ { id = OrderId 1
+                  , place =
                         { name = "Chicago's Pizza"
                         , description = "Na przeciwko"
                         , link = "TODO"
@@ -94,7 +52,8 @@ init =
                         ]
                   , status = Championed
                   }
-                , { place =
+                , { id = OrderId 2
+                  , place =
                         { name = "Chicago's Pizza"
                         , description = "Na przeciwko"
                         , link = "TODO"
@@ -111,7 +70,8 @@ init =
                         ]
                   , status = Ordered
                   }
-                , { place =
+                , { id = OrderId 3
+                  , place =
                         { name = "TeleSajgon"
                         , description = "Chińczyk z pudłami"
                         , link = "http://www.telesajgon.pl/ken.html"
@@ -144,7 +104,8 @@ init =
                         ]
                   , status = Championed
                   }
-                , { place =
+                , { id = OrderId 4
+                  , place =
                         { name = "Dominos"
                         , description = "nie \"Dominium\""
                         , link = "TODO"
@@ -223,7 +184,14 @@ statusName status =
             "Zaproponowane"
 
 
-orderCardLane : { a | user : Participant } -> ( OrderStatus, List Order ) -> Html Msg
+type alias CardContext a =
+    { a
+        | user : Participant
+        , positionForm : Maybe PositionForm
+    }
+
+
+orderCardLane : CardContext a -> ( OrderStatus, List Order ) -> Html Msg
 orderCardLane model ( status, orders ) =
     div []
         [ Html.h3 [] [ text (statusName status) ]
@@ -231,7 +199,7 @@ orderCardLane model ( status, orders ) =
         ]
 
 
-cardsList : { a | user : Participant } -> List (Card.Config Msg) -> Html Msg
+cardsList : CardContext a -> List (Card.Config Msg) -> Html Msg
 cardsList model cards =
     Grid.containerFluid []
         [ cards
@@ -261,7 +229,7 @@ newOrderCard =
             ]
 
 
-orderCard : { a | user : Participant } -> Order -> Card.Config Msg
+orderCard : CardContext a -> Order -> Card.Config Msg
 orderCard model order =
     Card.config [ Card.attrs [ Spacing.mb3 ] ]
         |> Card.headerH4 []
@@ -278,22 +246,66 @@ orderCard model order =
             (order.positions
                 |> List.map
                     (\p ->
-                        ListGroup.li
-                            (if p.participant.id == model.user.id then
-                                [ ListGroup.primary ]
-                             else
-                                []
-                            )
-                            (orderPosition p)
+                        let
+                            isCurrentUser =
+                                p.participant.id == model.user.id
+
+                            options =
+                                [ ListGroup.attrs [ Flex.block, Flex.justifyBetween, Flex.alignItemsCenter ] ]
+                                    |> appendIf isCurrentUser [ ListGroup.primary ]
+                        in
+                            ListGroup.li options
+                                (orderPositionOrForm model order.id isCurrentUser p)
                     )
             )
 
 
-orderPosition : Position -> List (Html Msg)
-orderPosition { participant, description } =
-    [ div [] [ text participant.name ]
+orderPositionOrForm : CardContext a -> OrderId -> Bool -> Position -> List (Html Msg)
+orderPositionOrForm ctx orderId isCurrentUser position =
+    ctx.positionForm
+        |> Maybe.andThen
+            (\form ->
+                if form.orderId == orderId && isCurrentUser then
+                    Just form
+                else
+                    Nothing
+            )
+        |> Maybe.map PositionForm.view
+        |> Maybe.map (List.map <| Html.map UpdatePositionForm)
+        |> Maybe.map
+            (\v ->
+                v
+                    ++ ([ Html.button [ onClick SavePositionForm ] [ text "Zapisz" ]
+                        ]
+                       )
+            )
+        |> Maybe.withDefault (orderPosition isCurrentUser orderId position)
+
+
+orderPosition : Bool -> OrderId -> Position -> List (Html Msg)
+orderPosition isCurrentUser orderId { participant, description, champion } =
+    [ div []
+        ([ text participant.name ]
+            |> appendIf isCurrentUser
+                [ Html.button
+                    [ onClick (OpenPositionForm orderId)
+                    , Html.Attributes.align "right"
+                    ]
+                    [ text "Zmień" ]
+                ]
+            |> appendIf champion
+                [ Badge.pillSuccess [] [ text "☎" ] ]
+        )
     , div [ Html.Attributes.align "right" ] [ text description ]
     ]
+
+
+appendIf : Bool -> List a -> List a -> List a
+appendIf b new base =
+    if b then
+        base ++ new
+    else
+        base
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -304,6 +316,68 @@ update msg model =
 
         NavbarMsg state ->
             { model | navbar = state } ! []
+
+        OpenPositionForm orderId ->
+            case getOrder orderId model.orders of
+                Just order ->
+                    { model
+                        | positionForm = Just <| PositionForm.create order model.user
+                    }
+                        ! []
+
+                Nothing ->
+                    model ! []
+
+        UpdatePositionForm msg ->
+            case model.positionForm of
+                Just form ->
+                    { model
+                        | positionForm = Just <| PositionForm.update msg form
+                    }
+                        ! []
+
+                Nothing ->
+                    model ! []
+
+        SavePositionForm ->
+            (model.positionForm
+                |> Maybe.map
+                    (\form ->
+                        PositionForm.toPosition model.user form
+                            |> Result.map
+                                (\position ->
+                                    { model | positionForm = Nothing }
+                                        |> updatePosition form.orderId position
+                                )
+                            |> Result.withDefault model
+                    )
+                |> Maybe.withDefault model
+            )
+                ! []
+
+
+getOrder : OrderId -> List Model.Order -> Maybe Model.Order
+getOrder id orders =
+    List.filter (\o -> o.id == id) orders
+        |> List.head
+
+
+updateOrder : OrderId -> (Order -> Order) -> Model -> Model
+updateOrder orderId update model =
+    { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
+
+
+updatePosition : OrderId -> Position -> Model -> Model
+updatePosition orderId position =
+    updateOrder orderId
+        (\order ->
+            case List.findIndex (\p -> p.participant.id == position.participant.id) order.positions of
+                Just idx ->
+                    { order | positions = List.setAt idx position order.positions }
+
+                Nothing ->
+                    { order | positions = position :: order.positions }
+        )
 
 
 subscriptions : Model -> Sub Msg

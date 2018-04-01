@@ -4,11 +4,17 @@ import Fuzz
 import Fuzz exposing (Fuzzer)
 import List.Extra as List
 import Main exposing (..)
+import Model exposing (..)
 
 
-order : Fuzzer Main.Order
+type alias Order =
+    Model.Order
+
+
+order : Fuzzer Order
 order =
-    Fuzz.map3 Order
+    Fuzz.map4 Order
+        (Fuzz.int |> Fuzz.map OrderId)
         place
         positionsList
         orderStatus

@@ -20,8 +20,11 @@ suite =
             let
                 user =
                     unsafeFirst order.positions |> .participant
+
+                cardContext =
+                    { user = user, positionForm = Nothing }
             in
-                orderCard { user = user } order
+                orderCard cardContext order
                     |> Card.view
                     |> Query.fromHtml
                     |> Query.find [ class "list-group-item-primary" ]
