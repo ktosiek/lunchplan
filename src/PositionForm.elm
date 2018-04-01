@@ -1,6 +1,7 @@
 module PositionForm exposing (..)
 
 import Model exposing (..)
+import Utils exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (type_, value, checked, placeholder)
 import Html.Events exposing (onInput, onCheck, onClick)
@@ -17,6 +18,10 @@ type alias ValidForm =
     , description : String
     , champion : Bool
     }
+
+
+type alias FieldError =
+    ( PositionFormField, String )
 
 
 create : Model.Order -> Participant -> PositionForm
@@ -49,12 +54,16 @@ view send saveMsg form =
         ([ Form.group []
             [ Form.label [] [ text "Zamawiane danie" ]
             , Input.text
-                [ Input.attrs
+                ([ Input.attrs
                     [ onInput (UpdateDescription >> send)
                     , value form.description
                     , placeholder "dkkFM 📻"
                     ]
-                ]
+                 ]
+                    |> appendIf (not <| List.isEmpty <| fieldErrors Description form)
+                        [ Input.danger ]
+                )
+            , showErrors form.errors
             ]
          , Form.group []
             ([ Checkbox.checkbox
@@ -65,24 +74,22 @@ view send saveMsg form =
              ]
             )
          ]
-            ++ showErrors form.errors
             ++ [ Button.button [ Button.primary, Button.attrs [] ] [ text "Zapisz" ]
                ]
         )
         |> List.singleton
 
 
-showErrors : List String -> List (Html msg)
+showErrors : List FieldError -> Html msg
 showErrors errors =
-    if List.length errors == 0 then
-        []
-    else
-        errors
-            |> List.map (Html.text >> List.singleton >> Html.li [])
-            |> Html.ul []
-            |> List.singleton
-            |> Form.invalidFeedback []
-            |> List.singleton
+    Form.invalidFeedback [] <|
+        if List.length errors == 0 then
+            []
+        else
+            errors
+                |> List.map (Tuple.second >> Html.text >> List.singleton >> Html.li [])
+                |> Html.ul []
+                |> List.singleton
 
 
 update : PositionFormMsg -> PositionForm -> PositionForm
@@ -114,7 +121,19 @@ getErrors r =
             err
 
 
-toPosition : Participant -> PositionForm -> Result (List String) Position
+fieldErrors : PositionFormField -> PositionForm -> List String
+fieldErrors field model =
+    model.errors
+        |> List.filterMap
+            (\( f, err ) ->
+                if f == field then
+                    Just err
+                else
+                    Nothing
+            )
+
+
+toPosition : Participant -> PositionForm -> Result (List FieldError) Position
 toPosition participant form =
     validator form
         |> Result.map
@@ -126,9 +145,9 @@ toPosition participant form =
             )
 
 
-validator : V.Validator String PositionForm ValidForm
+validator : V.Validator FieldError PositionForm ValidForm
 validator =
     V.ok ValidForm
         |> V.keep .orderId
-        |> V.verify .description (VString.notBlank "Podaj opis zamówienia")
+        |> V.verify .description (VString.notBlank ( Description, "Podaj opis zamówienia" ))
         |> V.keep .champion

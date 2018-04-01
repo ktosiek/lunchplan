@@ -15,8 +15,12 @@ type alias PositionForm =
     { orderId : OrderId
     , description : String
     , champion : Bool
-    , errors : List String
+    , errors : List ( PositionFormField, String )
     }
+
+
+type PositionFormField
+    = Description
 
 
 type OrderStatus
