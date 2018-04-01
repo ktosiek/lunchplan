@@ -7,3 +7,13 @@ appendIf b new base =
         base ++ new
     else
         base
+
+
+getErrors : Result (List a) b -> List a
+getErrors r =
+    case r of
+        Ok _ ->
+            []
+
+        Err err ->
+            err

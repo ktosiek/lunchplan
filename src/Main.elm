@@ -17,12 +17,14 @@ import Bootstrap.Navbar as Navbar
 import Bootstrap.Utilities.Spacing as Spacing
 import Bootstrap.Utilities.Flex as Flex
 import Model exposing (..)
+import Types exposing (..)
 import Utils exposing (..)
 import PositionForm
+import OrderForm
 
 
 type alias Order =
-    Model.Order
+    Types.Order
 
 
 init : ( Model, Cmd Msg )
@@ -34,6 +36,7 @@ init =
         ( { navbar = navbarState
           , user = { name = "Piesio Grzesio", id = ParticipantId "pg" }
           , positionForm = Nothing
+          , orderForm = Nothing
           , orders =
                 [ { id = OrderId 1
                   , place =
@@ -188,7 +191,8 @@ statusName status =
 type alias CardContext a =
     { a
         | user : Participant
-        , positionForm : Maybe PositionForm
+        , positionForm : Maybe PositionForm.Model
+        , orderForm : Maybe OrderForm.Model
     }
 
 
@@ -233,16 +237,7 @@ newOrderCard =
 orderCard : CardContext a -> Order -> Card.Config Msg
 orderCard model order =
     Card.config [ Card.attrs [ Spacing.mb3 ] ]
-        |> Card.headerH4 []
-            [ text order.place.name ]
-        |> Card.block []
-            [ Block.text []
-                [ Html.a [ href order.place.link ] [ text order.place.link ]
-                ]
-            , Block.text []
-                [ text order.place.description
-                ]
-            ]
+        |> orderHeaderOrForm order model.orderForm
         |> Card.listGroup
             (order.positions
                 |> List.map
@@ -259,6 +254,41 @@ orderCard model order =
                                 (orderPositionOrForm model order.id isCurrentUser p)
                     )
             )
+
+
+orderHeaderOrForm : Order -> Maybe OrderForm.Model -> Card.Config Msg -> Card.Config Msg
+orderHeaderOrForm order mform =
+    mform
+        |> Maybe.andThen
+            (\f ->
+                if f.orderId == order.id then
+                    Just f
+                else
+                    Nothing
+            )
+        |> Maybe.map
+            (OrderForm.view UpdateOrderForm SaveOrderForm
+                >> List.map Block.custom
+                >> Card.block []
+            )
+        |> Maybe.withDefault (orderCardHeader order)
+
+
+orderCardHeader : Order -> Card.Config Msg -> Card.Config Msg
+orderCardHeader order cardConfig =
+    cardConfig
+        |> Card.headerH4 []
+            [ text order.place.name
+            , Html.button [ onClick (EditOrder order.id) ] [ text "Zmień" ]
+            ]
+        |> Card.block []
+            [ Block.text []
+                [ Html.a [ href order.place.link ] [ text order.place.link ]
+                ]
+            , Block.text []
+                [ text order.place.description
+                ]
+            ]
 
 
 orderPositionOrForm : CardContext a -> OrderId -> Bool -> Position -> List (Html Msg)
@@ -340,8 +370,36 @@ update msg model =
             )
                 ! []
 
+        EditOrder orderId ->
+            case getOrder orderId model.orders of
+                Just order ->
+                    { model | orderForm = Just <| OrderForm.fromOrder order } ! []
 
-getOrder : OrderId -> List Model.Order -> Maybe Model.Order
+                Nothing ->
+                    model ! []
+
+        UpdateOrderForm msg ->
+            (model.orderForm
+                |> Maybe.map (OrderForm.update msg)
+                |> Maybe.map (\form -> { model | orderForm = Just form })
+                |> Maybe.withDefault model
+            )
+                ! []
+
+        SaveOrderForm ->
+            (model.orderForm
+                |> Maybe.andThen (OrderForm.validator >> Result.toMaybe)
+                |> Maybe.map
+                    (\form ->
+                        updateOrder form.orderId (OrderForm.toOrder form) model
+                    )
+                |> Maybe.map (\m -> { m | orderForm = Nothing })
+                |> Maybe.withDefault model
+            )
+                ! []
+
+
+getOrder : OrderId -> List Order -> Maybe Order
 getOrder id orders =
     List.filter (\o -> o.id == id) orders
         |> List.head

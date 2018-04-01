@@ -1,12 +1,7 @@
 module UtilsTest exposing (..)
 
-import Debug
 import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
-import Html
-import List.Extra as List
 import Test exposing (..)
-import Fuzzers
 import Utils exposing (..)
 
 
@@ -15,8 +10,12 @@ suite =
     describe "Utils"
         [ describe "appendIf"
             [ test "True"
-                (\_ -> [ Expect.equal [ 1, 2, 3 ] (appendIf True [ 1 ] [ 2, 3 ]) ])
+                (\_ -> Expect.equal [ 1, 2, 3 ] (appendIf True [ 2, 3 ] [ 1 ]))
             , test "False"
-                (\_ -> [ Expect.equal [ 1 ] (appendIf False [ 1 ] [ 2, 3 ]) ])
+                (\_ -> Expect.equal [ 1 ] (appendIf False [ 2, 3 ] [ 1 ]))
+            ]
+        , describe "getErrors"
+            [ test "Err" (\_ -> Expect.equal [ "x" ] <| getErrors (Err [ "x" ]))
+            , test "Ok" (\_ -> Expect.equal [] <| getErrors (Ok [ "x" ]))
             ]
         ]

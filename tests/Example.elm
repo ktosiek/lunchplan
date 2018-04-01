@@ -22,7 +22,7 @@ suite =
                     unsafeFirst order.positions |> .participant
 
                 cardContext =
-                    { user = user, positionForm = Nothing }
+                    { user = user, positionForm = Nothing, orderForm = Nothing }
             in
                 orderCard cardContext order
                     |> Card.view

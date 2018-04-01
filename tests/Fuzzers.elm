@@ -3,12 +3,11 @@ module Fuzzers exposing (..)
 import Fuzz
 import Fuzz exposing (Fuzzer)
 import List.Extra as List
-import Main exposing (..)
-import Model exposing (..)
+import Types exposing (..)
 
 
 type alias Order =
-    Model.Order
+    Types.Order
 
 
 order : Fuzzer Order

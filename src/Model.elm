@@ -1,72 +1,17 @@
 module Model exposing (..)
 
 import Bootstrap.Navbar as Navbar
+import Types exposing (..)
+import PositionForm
+import OrderForm
 
 
 type alias Model =
     { navbar : Navbar.State
-    , orders : List Order
+    , orders : List Types.Order
     , user : Participant
-    , positionForm : Maybe PositionForm
-    }
-
-
-type alias PositionForm =
-    { orderId : OrderId
-    , description : String
-    , champion : Bool
-    , errors : List ( PositionFormField, String )
-    }
-
-
-type PositionFormField
-    = Description
-
-
-type OrderStatus
-    = Proposed
-    | Championed
-    | Ordered
-
-
-allOrderStatuses : List OrderStatus
-allOrderStatuses =
-    [ Ordered, Championed, Proposed ]
-
-
-type alias Order =
-    { id : OrderId
-    , place : Place
-    , positions : List Position
-    , status : OrderStatus
-    }
-
-
-type OrderId
-    = OrderId Int
-
-
-type alias Position =
-    { participant : Participant
-    , description : String
-    , champion : Bool
-    }
-
-
-type alias Participant =
-    { name : String
-    , id : ParticipantId
-    }
-
-
-type ParticipantId
-    = ParticipantId String
-
-
-type alias Place =
-    { name : String
-    , link : String
-    , description : String
+    , positionForm : Maybe PositionForm.Model
+    , orderForm : Maybe OrderForm.Model
     }
 
 
@@ -74,10 +19,8 @@ type Msg
     = NoOp
     | NavbarMsg Navbar.State
     | OpenPositionForm OrderId
-    | UpdatePositionForm PositionFormMsg
+    | UpdatePositionForm PositionForm.Msg
     | SavePositionForm
-
-
-type PositionFormMsg
-    = UpdateDescription String
-    | UpdateChampion Bool
+    | EditOrder OrderId
+    | UpdateOrderForm OrderForm.Msg
+    | SaveOrderForm

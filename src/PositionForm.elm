@@ -1,6 +1,6 @@
 module PositionForm exposing (..)
 
-import Model exposing (..)
+import Types exposing (..)
 import Utils exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (type_, value, checked, placeholder)
@@ -13,6 +13,23 @@ import Verify as V
 import String.Verify as VString
 
 
+type alias Model =
+    { orderId : OrderId
+    , description : String
+    , champion : Bool
+    , errors : List ( FormField, String )
+    }
+
+
+type FormField
+    = Description
+
+
+type Msg
+    = UpdateDescription String
+    | UpdateChampion Bool
+
+
 type alias ValidForm =
     { orderId : OrderId
     , description : String
@@ -21,10 +38,10 @@ type alias ValidForm =
 
 
 type alias FieldError =
-    ( PositionFormField, String )
+    ( FormField, String )
 
 
-create : Model.Order -> Participant -> PositionForm
+create : Types.Order -> Participant -> Model
 create order user =
     let
         currentEntry =
@@ -48,7 +65,7 @@ create order user =
                 }
 
 
-view : (PositionFormMsg -> msg) -> msg -> PositionForm -> List (Html msg)
+view : (Msg -> msg) -> msg -> Model -> List (Html msg)
 view send saveMsg form =
     Form.form [ Html.Events.onSubmit saveMsg ]
         ([ Form.group []
@@ -92,7 +109,7 @@ showErrors errors =
                 |> List.singleton
 
 
-update : PositionFormMsg -> PositionForm -> PositionForm
+update : Msg -> Model -> Model
 update msg model =
     (case msg of
         UpdateDescription v ->
@@ -104,24 +121,14 @@ update msg model =
         |> updateErrors
 
 
-updateErrors : PositionForm -> PositionForm
+updateErrors : Model -> Model
 updateErrors model =
     { model
         | errors = validator model |> getErrors
     }
 
 
-getErrors : Result (List a) b -> List a
-getErrors r =
-    case r of
-        Ok _ ->
-            []
-
-        Err err ->
-            err
-
-
-fieldErrors : PositionFormField -> PositionForm -> List String
+fieldErrors : FormField -> Model -> List String
 fieldErrors field model =
     model.errors
         |> List.filterMap
@@ -133,7 +140,7 @@ fieldErrors field model =
             )
 
 
-toPosition : Participant -> PositionForm -> Result (List FieldError) Position
+toPosition : Participant -> Model -> Result (List FieldError) Position
 toPosition participant form =
     validator form
         |> Result.map
@@ -145,7 +152,7 @@ toPosition participant form =
             )
 
 
-validator : V.Validator FieldError PositionForm ValidForm
+validator : V.Validator FieldError Model ValidForm
 validator =
     V.ok ValidForm
         |> V.keep .orderId
