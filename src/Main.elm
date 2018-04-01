@@ -17,6 +17,7 @@ import Bootstrap.Navbar as Navbar
 import Bootstrap.Utilities.Spacing as Spacing
 import Bootstrap.Utilities.Flex as Flex
 import Model exposing (..)
+import Utils exposing (..)
 import PositionForm
 
 
@@ -270,15 +271,7 @@ orderPositionOrForm ctx orderId isCurrentUser position =
                 else
                     Nothing
             )
-        |> Maybe.map PositionForm.view
-        |> Maybe.map (List.map <| Html.map UpdatePositionForm)
-        |> Maybe.map
-            (\v ->
-                v
-                    ++ ([ Html.button [ onClick SavePositionForm ] [ text "Zapisz" ]
-                        ]
-                       )
-            )
+        |> Maybe.map (PositionForm.view UpdatePositionForm SavePositionForm)
         |> Maybe.withDefault (orderPosition isCurrentUser orderId position)
 
 
@@ -286,6 +279,8 @@ orderPosition : Bool -> OrderId -> Position -> List (Html Msg)
 orderPosition isCurrentUser orderId { participant, description, champion } =
     [ div []
         ([ text participant.name ]
+            |> appendIf champion
+                [ Badge.pillSuccess [] [ text "☎" ] ]
             |> appendIf isCurrentUser
                 [ Html.button
                     [ onClick (OpenPositionForm orderId)
@@ -293,19 +288,9 @@ orderPosition isCurrentUser orderId { participant, description, champion } =
                     ]
                     [ text "Zmień" ]
                 ]
-            |> appendIf champion
-                [ Badge.pillSuccess [] [ text "☎" ] ]
         )
     , div [ Html.Attributes.align "right" ] [ text description ]
     ]
-
-
-appendIf : Bool -> List a -> List a -> List a
-appendIf b new base =
-    if b then
-        base ++ new
-    else
-        base
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

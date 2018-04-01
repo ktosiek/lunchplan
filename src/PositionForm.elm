@@ -2,8 +2,12 @@ module PositionForm exposing (..)
 
 import Model exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (type_, value, checked)
-import Html.Events exposing (onInput, onCheck)
+import Html.Attributes exposing (type_, value, checked, placeholder)
+import Html.Events exposing (onInput, onCheck, onClick)
+import Bootstrap.Form as Form
+import Bootstrap.Form.Checkbox as Checkbox
+import Bootstrap.Form.Input as Input
+import Bootstrap.Button as Button
 import Verify as V
 import String.Verify as VString
 
@@ -39,25 +43,45 @@ create order user =
                 }
 
 
-view : PositionForm -> List (Html PositionFormMsg)
-view form =
-    [ input [ onInput UpdateDescription, value form.description ] []
-    , label []
-        [ text "Złożę zamówienie"
-        , input [ type_ "checkbox", checked form.champion, onCheck UpdateChampion ] []
-        ]
-    ]
-        ++ showErrors form.errors
+view : (PositionFormMsg -> msg) -> msg -> PositionForm -> List (Html msg)
+view send saveMsg form =
+    Form.form [ Html.Events.onSubmit saveMsg ]
+        ([ Form.group []
+            [ Form.label [] [ text "Zamawiane danie" ]
+            , Input.text
+                [ Input.attrs
+                    [ onInput (UpdateDescription >> send)
+                    , value form.description
+                    , placeholder "dkkFM 📻"
+                    ]
+                ]
+            ]
+         , Form.group []
+            ([ Checkbox.checkbox
+                [ Checkbox.id "champion"
+                , Checkbox.attrs [ checked form.champion, onCheck (UpdateChampion >> send) ]
+                ]
+                "Złożę zamówienie"
+             ]
+            )
+         ]
+            ++ showErrors form.errors
+            ++ [ Button.button [ Button.primary, Button.attrs [] ] [ text "Zapisz" ]
+               ]
+        )
+        |> List.singleton
 
 
-showErrors : List String -> List (Html PositionFormMsg)
+showErrors : List String -> List (Html msg)
 showErrors errors =
-    if errors == [] then
+    if List.length errors == 0 then
         []
     else
         errors
             |> List.map (Html.text >> List.singleton >> Html.li [])
             |> Html.ul []
+            |> List.singleton
+            |> Form.invalidFeedback []
             |> List.singleton
 
 
