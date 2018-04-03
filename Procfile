@@ -1,2 +1,2 @@
 client: yarn client
-server: pipenv run python api.py
+server: pipenv run hupper -m api
