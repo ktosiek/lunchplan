@@ -28,14 +28,18 @@ type alias Order =
     Types.Order
 
 
-init : ( Model, Cmd Msg )
-init =
+type alias Flags =
+    { userID : String, userName : String }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
     let
         ( navbarState, navbarMsg ) =
             Navbar.initialState NavbarMsg
     in
         ( { navbar = navbarState
-          , user = { name = "Piesio Grzesio", id = ParticipantId "pg" }
+          , user = { name = flags.userName, id = ParticipantId flags.userID }
           , positionForm = Nothing
           , orderForm = OrderForm.newOrder
           , orders =
@@ -508,9 +512,9 @@ subscriptions model =
     Sub.none
 
 
-main : Program Never Model Msg
+main : Program Flags Model Msg
 main =
-    program
+    Html.programWithFlags
         { init = init
         , view = view
         , update = update
