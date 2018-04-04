@@ -46,3 +46,29 @@ type alias Place =
     , link : String
     , description : String
     }
+
+
+fixOrderStatus : Order -> Order
+fixOrderStatus order =
+    { order
+        | status =
+            case order.status of
+                Ordered ->
+                    Ordered
+
+                _ ->
+                    if List.any .champion order.positions then
+                        Championed
+                    else
+                        Proposed
+    }
+
+
+unParticipantId : ParticipantId -> String
+unParticipantId (ParticipantId id) =
+    id
+
+
+unOrderId : OrderId -> Int
+unOrderId (OrderId i) =
+    i

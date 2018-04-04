@@ -4,12 +4,15 @@ import Bootstrap.Navbar as Navbar
 import Types exposing (..)
 import PositionForm
 import OrderForm
+import SyncAPI
+import Sync
 
 
 type alias Model =
     { navbar : Navbar.State
     , orders : List Types.Order
     , user : Participant
+    , syncState : Sync.SyncState
     , positionForm : Maybe PositionForm.Model
     , orderForm : OrderForm.Model
     }
@@ -24,3 +27,5 @@ type Msg
     | EditOrder OrderId
     | UpdateOrderForm OrderForm.Msg
     | SaveOrderForm
+    | FullSync SyncAPI.SyncData
+    | SyncOrder SyncAPI.Order

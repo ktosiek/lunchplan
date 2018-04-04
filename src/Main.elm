@@ -22,6 +22,8 @@ import Types exposing (..)
 import Utils exposing (..)
 import PositionForm
 import OrderForm
+import Sync
+import SyncAPI
 
 
 type alias Order =
@@ -42,96 +44,8 @@ init flags =
           , user = { name = flags.userName, id = ParticipantId flags.userID }
           , positionForm = Nothing
           , orderForm = OrderForm.newOrder
-          , orders =
-                [ { id = OrderId 1
-                  , place =
-                        { name = "Chicago's Pizza"
-                        , description = "Na przeciwko"
-                        , link = "TODO"
-                        }
-                  , positions =
-                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
-                          , champion = False
-                          , description = "Texas"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = True
-                          , description = "Cztery sery"
-                          }
-                        ]
-                  , status = Championed
-                  }
-                , { id = OrderId 2
-                  , place =
-                        { name = "Chicago's Pizza"
-                        , description = "Na przeciwko"
-                        , link = "TODO"
-                        }
-                  , positions =
-                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
-                          , champion = False
-                          , description = "Texas"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = True
-                          , description = "Cztery sery"
-                          }
-                        ]
-                  , status = Ordered
-                  }
-                , { id = OrderId 3
-                  , place =
-                        { name = "TeleSajgon"
-                        , description = "Chińczyk z pudłami"
-                        , link = "http://www.telesajgon.pl/ken.html"
-                        }
-                  , positions =
-                        [ { participant = { name = "j Grzesio", id = ParticipantId "pjg" }
-                          , champion = False
-                          , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = False
-                          , description = "Banan w cieście"
-                          }
-                        , { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
-                          , champion = False
-                          , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = False
-                          , description = "Banan w cieście"
-                          }
-                        , { participant = { name = "l Grzesio", id = ParticipantId "pgl" }
-                          , champion = False
-                          , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = False
-                          , description = "Banan w cieście"
-                          }
-                        ]
-                  , status = Championed
-                  }
-                , { id = OrderId 4
-                  , place =
-                        { name = "Dominos"
-                        , description = "nie \"Dominium\""
-                        , link = "TODO"
-                        }
-                  , positions =
-                        [ { participant = { name = "Piesio Grzesio", id = ParticipantId "pg" }
-                          , champion = True
-                          , description = "Duża zupa MIEN z makaronem sojowym i wołowiną"
-                          }
-                        , { participant = { name = "Kot Psot", id = ParticipantId "kp" }
-                          , champion = False
-                          , description = "Banan w cieście"
-                          }
-                        ]
-                  , status = Championed
-                  }
-                ]
+          , orders = []
+          , syncState = Sync.emptyState
           }
         , Cmd.batch
             [ navbarMsg
@@ -417,17 +331,22 @@ update msg model =
             { model | orderForm = OrderForm.update msg model.orderForm }
                 ! []
 
+        {- TODO Zamawiam! -}
         SaveOrderForm ->
-            (OrderForm.validator model.orderForm
+            OrderForm.validator model.orderForm
                 |> Result.toMaybe
                 |> Maybe.map
                     (\validForm ->
-                        updateOrder model.orderForm.orderId (OrderForm.toOrder validForm) model
+                        Sync.updateOrder model.orderForm.orderId validForm model
                     )
-                |> Maybe.map (\m -> { m | orderForm = OrderForm.newOrder })
-                |> Maybe.withDefault model
-            )
-                ! []
+                |> Maybe.map (\( m, c ) -> ( { m | orderForm = OrderForm.newOrder }, c ))
+                |> Maybe.withDefault (model ! [])
+
+        FullSync syncData ->
+            Sync.applyFullSync syncData model ! []
+
+        SyncOrder rawOrder ->
+            Sync.applyOrder rawOrder model ! []
 
 
 getOrder : OrderId -> List Order -> Maybe Order
@@ -448,22 +367,6 @@ updateOrder orderId update_ model =
 
             Nothing ->
                 { model | orders = (update (defaultOrder model)) :: model.orders }
-
-
-fixOrderStatus : Order -> Order
-fixOrderStatus order =
-    { order
-        | status =
-            case order.status of
-                Ordered ->
-                    Ordered
-
-                _ ->
-                    if List.any .champion order.positions then
-                        Championed
-                    else
-                        Proposed
-    }
 
 
 defaultOrder : Model -> Order
@@ -489,11 +392,6 @@ defaultOrder model =
         }
 
 
-unOrderId : OrderId -> Int
-unOrderId (OrderId i) =
-    i
-
-
 updatePosition : OrderId -> Position -> Model -> Model
 updatePosition orderId position =
     updateOrder (Just orderId)
@@ -509,7 +407,10 @@ updatePosition orderId position =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.batch
+        [ SyncAPI.sync FullSync
+        , SyncAPI.order SyncOrder
+        ]
 
 
 main : Program Flags Model Msg

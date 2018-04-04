@@ -3,18 +3,44 @@
 // Require index.html so it gets copied to dist
 require('./index.html');
 
-var UUID = require('uuid-js');
-var Elm = require('./Main.elm');
-var mountNode = document.getElementById('main');
+const UUID = require('uuid-js');
+const Elm = require('./Main.elm');
+const io = require('socket.io-client');
+const IO_URL = 'http://' + window.location.hostname + ':5000/';
 
-var userID = localStorage.getItem("userID") || UUID.create();
+const userID = localStorage.getItem("userID") || UUID.create().hex;
 localStorage.setItem("userID", userID);
 
-var userName = sessionStorage.getItem("userName") || prompt("Przedstaw się", "Piesio Grzesio");
+const userName = sessionStorage.getItem("userName") || prompt("Przedstaw się", "Piesio Grzesio");
 sessionStorage.setItem("userName", userName)
 
-// .embed() can take an optional second argument. This would be an object describing the data we need to start a program, i.e. a userID or some token
-var app = Elm.Main.embed(mountNode, {
+const mountNode = document.getElementById('main');
+const app = Elm.Main.embed(mountNode, {
     userID,
     userName,
 });
+
+
+// Przygotowanie portów do komunikacji z serwerem
+const connection = io(IO_URL)
+connection
+    .on('connect', (data) => {
+        connection.emit('login', { id: userID, name: userName })
+    })
+    .on('sync', (data) => {
+        app.ports.sync.send(data)
+    })
+    .on('user', (data) => {
+        app.ports.user.send(data)
+    })
+    .on('position', (data) => {
+        app.ports.position.send(data)
+    })
+    .on('order', (data) => {
+        app.ports.order.send(data)
+    })
+
+app.ports.updateOrder.subscribe(
+    (data) => { console.log('update order', data); connection.emit('update order', data) })
+app.ports.updatePosition.subscribe(
+    (data) => { connection.emit('update position', data) })

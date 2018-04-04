@@ -58,7 +58,3 @@ uniqueListBy : (a -> comparable) -> Fuzzer a -> Fuzzer (List a)
 uniqueListBy key a =
     Fuzz.list a
         |> Fuzz.map (List.uniqueBy key)
-
-
-unParticipantId (ParticipantId id) =
-    id

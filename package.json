@@ -11,6 +11,7 @@
     "elm-webpack-loader": "^4.5.0",
     "file-loader": "^1.1.11",
     "foreman": "^2.0.0",
+    "socket.io": "^2.1.0",
     "uuid-js": "^0.7.5",
     "webpack": "3",
     "webpack-cli": "2.0.9",
