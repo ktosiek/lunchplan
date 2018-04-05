@@ -69,12 +69,30 @@ view model =
                 ]
             |> Navbar.view model.navbar
         ]
+            ++ [ forkMe ]
             ++ (model.orders
                     |> groupOrdersByStatus
                     |> List.map (orderCardLane model)
                )
             ++ [ cardsList model [ newOrderCard model ]
                ]
+
+
+forkMe : Html msg
+forkMe =
+    Html.a [ href "https://github.com/ktosiek/lunchplan" ]
+        [ Html.img
+            [ Html.Attributes.src "https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png"
+            , Html.Attributes.style
+                [ ( "position", "absolute" )
+                , ( "top", "20" )
+                , ( "right", "0" )
+                , ( "border", "0" )
+                ]
+            , Html.Attributes.alt "Fork me on GitHub"
+            ]
+            []
+        ]
 
 
 groupOrdersByStatus : List Order -> List ( OrderStatus, List Order )
