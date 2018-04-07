@@ -1,11 +1,12 @@
+from aiohttp import web
 import json
-from sanic import Sanic
-from sanic.response import redirect
 import socketio
+import sys
 import redis
 
-sio = socketio.AsyncServer(async_mode='sanic', logger=True)
-app = Sanic()
+sio = socketio.AsyncServer(async_mode='aiohttp', logger=True)
+app = web.Application()
+routes = web.RouteTableDef()
 sio.attach(app)
 r = redis.StrictRedis()
 users = {}
@@ -62,10 +63,10 @@ async def full_sync(sid):
         room=sid)
 
 
-@app.route("/")
+@routes.get("/")
 async def redirect_to_app(request):
     bare_host = request.host.split(':')[0]
-    return redirect(f'http://{bare_host}:3000/')
+    return web.HTTPFound(f'http://{bare_host}:3000/')
 
 
 _last_order_id = max(
@@ -85,5 +86,15 @@ def upgrade_order(order: dict):
     return order
 
 
+async def on_shutdown(app):
+    print("Bye bye")
+    sys.exit(0)
+
+app.on_shutdown.append(on_shutdown)
+
+app.router.add_routes(routes)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    web.run_app(app, host="0.0.0.0", port=5000,
+                handle_signals=True)

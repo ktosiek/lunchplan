@@ -5,13 +5,14 @@ name = "pypi"
 
 [dev-packages]
 pylint = "*"
-autopep8 = "*"
+"autopep8" = "*"
 hupper = "*"
 
 [packages]
-sanic = "*"
 python-socketio = "*"
 redis = "*"
+asyncio = "*"
+aiohttp = "*"
 
 [requires]
 python_version = "3.6"
