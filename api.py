@@ -33,7 +33,7 @@ async def login(sid, data):
 async def update_order(sid, data):
     data['id'] = data.get('id', None) or get_next_order_id()
     r.set('order:{}'.format(data['id']), json.dumps(data))
-    await sio.emit('order', data)
+    await sio.emit('order', upgrade_order(data))
 
 
 @sio.on('update position')
@@ -45,7 +45,8 @@ async def update_position(sid, data):
 
 
 async def full_sync(sid):
-    orders = [json.loads(r.get(key)) for key in r.keys('order:*')]
+    orders = [upgrade_order(json.loads(r.get(key)))
+              for key in r.keys('order:*')]
     users = [json.loads(r.get(key)) for key in r.keys('user:*')]
     positions = [json.loads(r.get(key)) for key in r.keys('position:*')]
     print('sync', {
@@ -77,6 +78,11 @@ def get_next_order_id():
     global _last_order_id
     _last_order_id += 1
     return _last_order_id
+
+
+def upgrade_order(order: dict):
+    order.setdefault('isOrdered', False)
+    return order
 
 
 if __name__ == "__main__":

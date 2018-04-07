@@ -27,6 +27,7 @@ type Msg
     | EditOrder OrderId
     | UpdateOrderForm OrderForm.Msg
     | SaveOrderForm
+    | OrderOrder OrderId
     | FullSync SyncAPI.SyncData
     | SyncParticipant SyncAPI.User
     | SyncPosition SyncAPI.Position

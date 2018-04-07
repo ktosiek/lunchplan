@@ -118,34 +118,79 @@ applyPosition raw model =
 updateOrder : Maybe Types.OrderId -> OrderForm.ValidForm -> SyncedModel a -> ( SyncedModel a, Cmd msg )
 updateOrder morderId form model =
     let
-        setOrder : Int -> Maybe (Synced SyncAPI.Order) -> Synced SyncAPI.Order
-        setOrder orderId morder =
-            { id = orderId, name = form.name, link = form.link, description = form.description }
-                |> flip Synced.localFromMaybe morder
-
         syncState =
             model.syncState
+
+        baseOrder =
+            morderId
+                |> Maybe.map Types.unOrderId
+                |> Maybe.andThen (flip Dict.get syncState.orders)
+
+        localOrder orderId =
+            setOrder orderId baseOrder
+
+        setOrder : Int -> Maybe (Synced SyncAPI.Order) -> Synced SyncAPI.Order
+        setOrder orderId morder =
+            { id = orderId
+            , name = form.name
+            , link = form.link
+            , description = form.description
+            , isOrdered = Maybe.map (Synced.local >> .isOrdered) morder |> Maybe.withDefault False
+            }
+                |> flip Synced.localFromMaybe morder
     in
         ({ syncState
             | orders =
                 flip Maybe.map
                     morderId
                     (\(Types.OrderId orderId) ->
-                        Dict.update orderId
-                            (setOrder orderId >> Just)
-                            syncState.orders
+                        Dict.insert orderId (localOrder orderId) syncState.orders
                     )
                     |> Maybe.withDefault syncState.orders
          }
             |> flip denormalizeModel model
         )
             ! [ SyncAPI.updateOrder
-                    { id = morderId |> Maybe.map Types.unOrderId |> Maybe.withDefault 0
-                    , name = form.name
-                    , link = form.link
-                    , description = form.description
-                    }
+                    (morderId
+                        |> Maybe.map Types.unOrderId
+                        |> Maybe.withDefault 0
+                        |> localOrder
+                        |> Synced.local
+                    )
               ]
+
+
+orderOrder : Types.OrderId -> SyncedModel a -> ( SyncedModel a, Cmd msg )
+orderOrder orderId model =
+    let
+        syncState =
+            model.syncState
+
+        rawId =
+            Types.unOrderId orderId
+
+        ( newOrders, cmd ) =
+            syncState.orders
+                |> updateWith rawId
+                    (\o ->
+                        let
+                            order =
+                                o |> Synced.mapLocal (\o -> { o | isOrdered = True })
+                        in
+                            ( order
+                            , SyncAPI.updateOrder (Synced.local order)
+                            )
+                    )
+    in
+        ( denormalizeModel { syncState | orders = newOrders } model, cmd )
+
+
+updateWith : comparable -> (a -> ( a, Cmd msg )) -> Dict comparable a -> ( Dict comparable a, Cmd msg )
+updateWith id f d =
+    Dict.get id d
+        |> Maybe.map f
+        |> Maybe.map (\( v, cmd ) -> ( Dict.insert id v d, cmd ))
+        |> Maybe.withDefault ( d, Cmd.none )
 
 
 applyOrder : SyncAPI.Order -> SyncedModel a -> SyncedModel a
@@ -172,7 +217,11 @@ denormalizeModel syncState model =
                         { id = Types.OrderId o.id
                         , place = { name = o.name, description = o.description, link = o.link }
                         , positions = getPositions syncState o.id
-                        , status = Types.Proposed
+                        , status =
+                            if o.isOrdered then
+                                Types.Ordered
+                            else
+                                Types.Proposed
                         }
                     )
                 |> List.map Types.fixOrderStatus

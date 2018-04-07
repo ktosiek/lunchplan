@@ -31,6 +31,7 @@ type alias Order =
     , name : String
     , link : String
     , description : String
+    , isOrdered : Bool
     }
 
 

@@ -72,3 +72,13 @@ unParticipantId (ParticipantId id) =
 unOrderId : OrderId -> Int
 unOrderId (OrderId i) =
     i
+
+
+isChampioning : Participant -> Order -> Bool
+isChampioning participant order =
+    let
+        anyChampions =
+            order.positions
+                |> List.any (\p -> p.participant.id == participant.id)
+    in
+        order.status /= Ordered && anyChampions

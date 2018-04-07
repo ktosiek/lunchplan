@@ -7,17 +7,17 @@ type Synced a
     | Creating a
 
 
-map : (a -> a) -> Synced a -> Synced a
-map f v =
-    case v of
-        Synced a ->
-            Synced (f a)
+mapLocal : (a -> a) -> Synced a -> Synced a
+mapLocal f l =
+    case l of
+        Synced l ->
+            Saving l (f l)
 
         Saving remote local ->
             Saving remote (f local)
 
-        Creating a ->
-            Creating (f a)
+        Creating l ->
+            Creating (f l)
 
 
 localFromMaybe : a -> Maybe (Synced a) -> Synced a

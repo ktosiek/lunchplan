@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Html
+import Maybe.Extra as Maybe
 import List.Extra as List
 import Bootstrap.Navbar as Navbar
 import Model exposing (..)
@@ -103,7 +104,6 @@ update msg model =
             { model | orderForm = OrderForm.update msg model.orderForm }
                 ! []
 
-        {- TODO Zamawiam! -}
         SaveOrderForm ->
             OrderForm.validator model.orderForm
                 |> Result.toMaybe
@@ -112,6 +112,13 @@ update msg model =
                         Sync.updateOrder model.orderForm.orderId validForm model
                     )
                 |> Maybe.map (\( m, c ) -> ( { m | orderForm = OrderForm.newOrder }, c ))
+                |> Maybe.withDefault (model ! [])
+
+        OrderOrder orderId ->
+            getOrder orderId model.orders
+                |> Maybe.filter (isChampioning model.user)
+                |> Maybe.map .id
+                |> Maybe.map (flip Sync.orderOrder model)
                 |> Maybe.withDefault (model ! [])
 
         FullSync syncData ->

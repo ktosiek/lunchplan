@@ -7,6 +7,7 @@ import Dict
 import Dict.Extra as Dict
 import Maybe.Extra as Maybe
 import Bootstrap.CDN as CDN
+import Bootstrap.Button as Button
 import Bootstrap.Badge as Badge
 import Bootstrap.Card as Card
 import Bootstrap.Card.Block as Block
@@ -17,7 +18,7 @@ import Bootstrap.Navbar as Navbar
 import Bootstrap.Utilities.Spacing as Spacing
 import Bootstrap.Utilities.Flex as Flex
 import Model exposing (Model, Msg(..))
-import Types exposing (Order, OrderId, OrderStatus(..), allOrderStatuses, Position, Participant)
+import Types exposing (Order, OrderId, OrderStatus(..), allOrderStatuses, Position, Participant, isChampioning)
 import Utils exposing (appendIf)
 import PositionForm
 import OrderForm
@@ -154,7 +155,7 @@ orderCard model order =
             [ ListGroup.attrs [ Flex.block, Flex.justifyBetween, Flex.alignItemsCenter ] ]
     in
         Card.config [ Card.attrs [ Spacing.mb3 ] ]
-            |> orderHeaderOrForm order model.orderForm
+            |> orderHeaderOrForm model order
             |> Card.listGroup
                 (order.positions
                     |> List.map
@@ -176,10 +177,10 @@ orderCard model order =
                 )
 
 
-orderHeaderOrForm : Order -> OrderForm.Model -> Card.Config Msg -> Card.Config Msg
-orderHeaderOrForm order form =
-    (if form.orderId == Just order.id then
-        Just form
+orderHeaderOrForm : CardContext a -> Order -> Card.Config Msg -> Card.Config Msg
+orderHeaderOrForm model order =
+    (if model.orderForm.orderId == Just order.id then
+        Just model.orderForm
      else
         Nothing
     )
@@ -188,16 +189,28 @@ orderHeaderOrForm order form =
                 >> List.map Block.custom
                 >> Card.block []
             )
-        |> Maybe.withDefault (orderCardHeader order)
+        |> Maybe.withDefault (orderCardHeader model order)
 
 
-orderCardHeader : Order -> Card.Config Msg -> Card.Config Msg
-orderCardHeader order cardConfig =
+orderCardHeader : { a | user : Participant } -> Order -> Card.Config Msg -> Card.Config Msg
+orderCardHeader model order cardConfig =
     cardConfig
         |> Card.headerH4 []
-            [ text order.place.name
-            , Html.button [ onClick (EditOrder order.id) ] [ text "Zmień" ]
-            ]
+            ([ text order.place.name
+             , Button.button
+                [ Button.onClick (EditOrder order.id)
+                , Button.attrs [ Html.Attributes.style [ ( "float", "right" ) ] ]
+                ]
+                [ text "Zmień" ]
+             ]
+                |> appendIf (isChampioning model.user order)
+                    [ Button.button
+                        [ Button.onClick (OrderOrder order.id)
+                        , Button.outlineSuccess
+                        ]
+                        [ text "Zamawiam" ]
+                    ]
+            )
         |> Card.block []
             [ Block.text []
                 [ Html.a [ href order.place.link ] [ text order.place.link ]
