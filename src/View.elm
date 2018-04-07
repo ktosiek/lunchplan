@@ -234,7 +234,10 @@ newOrderButtonOrForm model order =
 
 newOrderButton : Order -> List (Html Msg)
 newOrderButton order =
-    [ Html.button [ onClick (OpenPositionForm order.id) ] [ text "Dołącz do zamówienia" ] ]
+    if order.status /= Ordered then
+        [ Html.button [ onClick (OpenPositionForm order.id) ] [ text "Dołącz do zamówienia" ] ]
+    else
+        []
 
 
 orderPositionOrForm : CardContext a -> OrderId -> Bool -> Position -> List (Html Msg)
