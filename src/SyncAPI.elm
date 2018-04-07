@@ -16,7 +16,7 @@ port order : (Order -> msg) -> Sub msg
 port updateOrder : Order -> Cmd msg
 
 
-port updatePosition : Order -> Cmd msg
+port updatePosition : Position -> Cmd msg
 
 
 type alias SyncData =

@@ -28,4 +28,6 @@ type Msg
     | UpdateOrderForm OrderForm.Msg
     | SaveOrderForm
     | FullSync SyncAPI.SyncData
+    | SyncParticipant SyncAPI.User
+    | SyncPosition SyncAPI.Position
     | SyncOrder SyncAPI.Order

@@ -81,20 +81,15 @@ update msg model =
                     model ! []
 
         SavePositionForm ->
-            (model.positionForm
+            model.positionForm
+                |> Maybe.map PositionForm.validator
+                |> Maybe.andThen Result.toMaybe
                 |> Maybe.map
-                    (\form ->
-                        PositionForm.toPosition model.user form
-                            |> Result.map
-                                (\position ->
-                                    { model | positionForm = Nothing }
-                                        |> updatePosition form.orderId position
-                                )
-                            |> Result.withDefault model
+                    (\validForm ->
+                        Sync.updatePosition model.user validForm model
                     )
-                |> Maybe.withDefault model
-            )
-                ! []
+                |> Maybe.map (\( m, c ) -> ( { m | positionForm = Nothing }, c ))
+                |> Maybe.withDefault (model ! [])
 
         EditOrder orderId ->
             case getOrder orderId model.orders of
@@ -121,6 +116,12 @@ update msg model =
 
         FullSync syncData ->
             Sync.applyFullSync syncData model ! []
+
+        SyncParticipant raw ->
+            Sync.applyParticipant raw model ! []
+
+        SyncPosition raw ->
+            Sync.applyPosition raw model ! []
 
         SyncOrder rawOrder ->
             Sync.applyOrder rawOrder model ! []
@@ -187,4 +188,6 @@ subscriptions model =
     Sub.batch
         [ SyncAPI.sync FullSync
         , SyncAPI.order SyncOrder
+        , SyncAPI.user SyncParticipant
+        , SyncAPI.position SyncPosition
         ]
