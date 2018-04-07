@@ -8,7 +8,7 @@ import List.Extra as List
 import Test exposing (..)
 import Test.Html.Query as Query
 import Test.Html.Selector exposing (text, tag, class)
-import Main exposing (..)
+import View exposing (..)
 import Fuzzers
 import Bootstrap.Card as Card
 import OrderForm
