@@ -1,4 +1,11 @@
-module Synced exposing (..)
+module Synced
+    exposing
+        ( Synced(..)
+        , mapLocal
+        , localFromMaybe
+        , local
+        , remote
+        )
 
 
 type Synced a
@@ -8,8 +15,8 @@ type Synced a
 
 
 mapLocal : (a -> a) -> Synced a -> Synced a
-mapLocal f l =
-    case l of
+mapLocal f s =
+    (case s of
         Synced l ->
             Saving l (f l)
 
@@ -18,11 +25,13 @@ mapLocal f l =
 
         Creating l ->
             Creating (f l)
+    )
+        |> normalize
 
 
 localFromMaybe : a -> Maybe (Synced a) -> Synced a
 localFromMaybe local mbase =
-    case mbase of
+    (case mbase of
         Nothing ->
             Creating local
 
@@ -34,11 +43,13 @@ localFromMaybe local mbase =
 
         Just (Creating _) ->
             Creating local
+    )
+        |> normalize
 
 
 local : Synced a -> a
-local v =
-    case v of
+local s =
+    case s of
         Synced a ->
             a
 
@@ -50,42 +61,29 @@ local v =
 
 
 remote : Synced a -> Maybe a
-remote v =
-    case v of
+remote s =
+    case s of
         Synced a ->
             Just a
 
         Saving a _ ->
             Just a
 
-        Creating a ->
+        Creating _ ->
             Nothing
 
 
-mapRemote : (a -> a) -> Synced a -> Synced a
-mapRemote f v =
-    case v of
-        Synced a ->
-            Synced (f a)
-
-        Saving remote local ->
-            Saving (f remote) local |> normalize
-
-        Creating a ->
-            v
-
-
 normalize : Synced a -> Synced a
-normalize v =
-    case v of
-        Synced a ->
-            v
+normalize s =
+    case s of
+        Synced _ ->
+            s
 
         Saving r l ->
             if r == l then
                 Synced l
             else
-                v
+                s
 
-        Creating a ->
-            v
+        Creating _ ->
+            s

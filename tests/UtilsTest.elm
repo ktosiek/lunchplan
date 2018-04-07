@@ -1,14 +1,13 @@
-module UtilsTest exposing (suite)
+module UtilsTest
+    exposing
+        ( utilsSuite
+        , utilsListSuite
+        )
 
 import Expect exposing (Expectation)
 import Test exposing (..)
 import Utils exposing (..)
 import Utils.List exposing (upsert, update)
-
-
-suite : Test
-suite =
-    Test.concat [ utilsSuite, utilsListSuite ]
 
 
 utilsSuite : Test

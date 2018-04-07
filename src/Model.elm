@@ -1,7 +1,7 @@
-module Model exposing (..)
+module Model exposing (Model, Msg(..))
 
 import Bootstrap.Navbar as Navbar
-import Types exposing (..)
+import Types exposing (OrderId, Participant)
 import PositionForm
 import OrderForm
 import SyncAPI

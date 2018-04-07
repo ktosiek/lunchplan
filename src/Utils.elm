@@ -1,4 +1,4 @@
-module Utils exposing (..)
+module Utils exposing (appendIf, getErrors)
 
 
 appendIf : Bool -> List a -> List a -> List a

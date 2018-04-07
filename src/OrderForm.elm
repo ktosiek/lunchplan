@@ -1,15 +1,14 @@
-module OrderForm exposing (..)
+module OrderForm exposing (Model, ValidForm, Msg, view, validator, update, newOrder, fromOrder)
 
-import Utils exposing (..)
-import Types exposing (..)
-import Html exposing (..)
+import Utils exposing (appendIf, getErrors)
+import Types exposing (OrderId)
+import Html exposing (Html, text)
 import Html.Events exposing (onInput, onSubmit)
-import Html.Attributes exposing (value, placeholder)
+import Html.Attributes as A
 import Bootstrap.Form as Form
 import Bootstrap.Form.Input as Input
 import Bootstrap.Button as Button
-import Verify exposing (Validator)
-import Verify as V
+import Verify as V exposing (Validator)
 import String.Verify as VString
 import String
 
@@ -84,12 +83,11 @@ newOrder =
 view : (Msg -> msg) -> msg -> Model -> List (Html msg)
 view send saveMsg form =
     Form.form [ onSubmit saveMsg ]
-        ([ fieldWrapper inputField form Name |> Html.map send
-         , fieldWrapper inputField form Link |> Html.map send
-         , fieldWrapper inputField form Description |> Html.map send
-         , Button.button [ Button.primary ] [ text "Zapisz" ]
-         ]
-        )
+        [ fieldWrapper inputField form Name |> Html.map send
+        , fieldWrapper inputField form Link |> Html.map send
+        , fieldWrapper inputField form Description |> Html.map send
+        , Button.button [ Button.primary ] [ text "Zapisz" ]
+        ]
         |> List.singleton
 
 
@@ -106,17 +104,6 @@ update msg model =
             { model | description = v }
     )
         |> updateErrors
-
-
-toOrder : ValidForm -> Types.Order -> Types.Order
-toOrder f base =
-    { base
-        | place =
-            { name = f.name
-            , link = f.link
-            , description = f.description
-            }
-    }
 
 
 updateErrors : Model -> Model
@@ -174,8 +161,8 @@ inputField placeholder_ value_ msg hasErrors =
     Input.text
         ([ Input.attrs
             [ onInput msg
-            , value value_
-            , placeholder placeholder_
+            , A.value value_
+            , A.placeholder placeholder_
             ]
          ]
             |> appendIf hasErrors [ Input.danger ]

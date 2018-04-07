@@ -1,8 +1,18 @@
-module Sync exposing (..)
+module Sync
+    exposing
+        ( SyncState
+        , emptyState
+        , applyFullSync
+        , applyOrder
+        , updateOrder
+        , orderOrder
+        , applyParticipant
+        , applyPosition
+        , updatePosition
+        )
 
 import Dict exposing (Dict)
 import Dict.Extra as Dict
-import List.Extra as List
 import Utils.List as List
 import SyncAPI
 import Synced exposing (Synced)
@@ -172,14 +182,8 @@ orderOrder orderId model =
         ( newOrders, cmd ) =
             syncState.orders
                 |> updateWith rawId
-                    (\o ->
-                        let
-                            order =
-                                o |> Synced.mapLocal (\o -> { o | isOrdered = True })
-                        in
-                            ( order
-                            , SyncAPI.updateOrder (Synced.local order)
-                            )
+                    (Synced.mapLocal (\o -> { o | isOrdered = True })
+                        >> (\order -> ( order, SyncAPI.updateOrder (Synced.local order) ))
                     )
     in
         ( denormalizeModel { syncState | orders = newOrders } model, cmd )
@@ -232,18 +236,6 @@ denormalizeModel syncState model =
     }
 
 
-loadPosition : SyncedModel a -> SyncAPI.Position -> Maybe Types.Position
-loadPosition model rawPosition =
-    getParticipant model.syncState rawPosition.participantId
-        |> Maybe.map
-            (\p ->
-                { participant = p
-                , description = rawPosition.description
-                , champion = rawPosition.champion
-                }
-            )
-
-
 getParticipant : SyncState -> String -> Maybe Types.Participant
 getParticipant syncState participantId =
     Dict.get participantId syncState.participants
@@ -281,16 +273,3 @@ type alias PositionId =
 positionId : SyncAPI.Position -> PositionId
 positionId p =
     ( p.orderId, p.participantId )
-
-
-newOrder : Int -> Types.Order
-newOrder orderId =
-    { id = Types.OrderId orderId
-    , place =
-        { name = ""
-        , link = ""
-        , description = ""
-        }
-    , status = Types.Proposed
-    , positions = []
-    }

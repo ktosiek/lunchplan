@@ -1,4 +1,16 @@
-port module SyncAPI exposing (..)
+port module SyncAPI
+    exposing
+        ( SyncData
+        , sync
+        , User
+        , user
+        , Order
+        , order
+        , updateOrder
+        , Position
+        , position
+        , updatePosition
+        )
 
 
 port sync : (SyncData -> msg) -> Sub msg
@@ -36,7 +48,9 @@ type alias Order =
 
 
 type alias User =
-    { id : String, name : String }
+    { id : String
+    , name : String
+    }
 
 
 type alias Position =

@@ -1,4 +1,18 @@
-module Types exposing (..)
+module Types
+    exposing
+        ( Order
+        , OrderStatus(..)
+        , allOrderStatuses
+        , OrderId(..)
+        , unOrderId
+        , fixOrderStatus
+        , Place
+        , Position
+        , Participant
+        , ParticipantId(..)
+        , unParticipantId
+        , isChampioning
+        )
 
 
 type OrderStatus

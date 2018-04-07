@@ -4,7 +4,6 @@ import Debug
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, int, list, string)
 import Html
-import List.Extra as List
 import Test exposing (..)
 import Test.Html.Query as Query
 import Test.Html.Selector exposing (text, tag, class)

@@ -1,10 +1,10 @@
-module PositionForm exposing (..)
+module PositionForm exposing (Model, Msg, ValidForm, view, validator, update, create)
 
-import Types exposing (..)
-import Utils exposing (..)
-import Html exposing (..)
-import Html.Attributes exposing (type_, value, checked, placeholder)
-import Html.Events exposing (onInput, onCheck, onClick)
+import Types exposing (OrderId, Participant)
+import Utils exposing (appendIf, getErrors)
+import Html exposing (Html, text)
+import Html.Attributes exposing (value, checked, placeholder)
+import Html.Events exposing (onInput, onCheck)
 import Bootstrap.Form as Form
 import Bootstrap.Form.Checkbox as Checkbox
 import Bootstrap.Form.Input as Input
@@ -68,7 +68,7 @@ create order user =
 view : (Msg -> msg) -> msg -> Model -> List (Html msg)
 view send saveMsg form =
     Form.form [ Html.Events.onSubmit saveMsg ]
-        ([ Form.group []
+        [ Form.group []
             [ Form.label [] [ text "Zamawiane danie" ]
             , Input.text
                 ([ Input.attrs
@@ -82,18 +82,15 @@ view send saveMsg form =
                 )
             , showErrors form.errors
             ]
-         , Form.group []
-            ([ Checkbox.checkbox
+        , Form.group []
+            [ Checkbox.checkbox
                 [ Checkbox.id "champion"
                 , Checkbox.attrs [ checked form.champion, onCheck (UpdateChampion >> send) ]
                 ]
                 "Złożę zamówienie"
-             ]
-            )
-         ]
-            ++ [ Button.button [ Button.primary, Button.attrs [] ] [ text "Zapisz" ]
-               ]
-        )
+            ]
+        , Button.button [ Button.primary, Button.attrs [] ] [ text "Zapisz" ]
+        ]
         |> List.singleton
 
 
@@ -137,18 +134,6 @@ fieldErrors field model =
                     Just err
                 else
                     Nothing
-            )
-
-
-toPosition : Participant -> Model -> Result (List FieldError) Position
-toPosition participant form =
-    validator form
-        |> Result.map
-            (\form ->
-                { participant = participant
-                , description = form.description
-                , champion = form.champion
-                }
             )
 
 

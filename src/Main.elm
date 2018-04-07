@@ -1,11 +1,17 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Html
 import Maybe.Extra as Maybe
-import List.Extra as List
 import Bootstrap.Navbar as Navbar
-import Model exposing (..)
-import Types exposing (..)
+import Model exposing (Model, Msg(..))
+import Types
+    exposing
+        ( Order
+        , OrderId(..)
+        , OrderStatus(..)
+        , isChampioning
+        , ParticipantId(..)
+        )
 import PositionForm
 import OrderForm
 import Sync
@@ -18,7 +24,9 @@ type alias Order =
 
 
 type alias Flags =
-    { userID : String, userName : String }
+    { userID : String
+    , userName : String
+    }
 
 
 main : Program Flags Model Msg
@@ -70,11 +78,11 @@ update msg model =
                 Nothing ->
                     model ! []
 
-        UpdatePositionForm msg ->
+        UpdatePositionForm formMsg ->
             case model.positionForm of
                 Just form ->
                     { model
-                        | positionForm = Just <| PositionForm.update msg form
+                        | positionForm = Just <| PositionForm.update formMsg form
                     }
                         ! []
 
@@ -100,8 +108,8 @@ update msg model =
                 Nothing ->
                     model ! []
 
-        UpdateOrderForm msg ->
-            { model | orderForm = OrderForm.update msg model.orderForm }
+        UpdateOrderForm formMsg ->
+            { model | orderForm = OrderForm.update formMsg model.orderForm }
                 ! []
 
         SaveOrderForm ->
@@ -140,58 +148,8 @@ getOrder id orders =
         |> List.head
 
 
-updateOrder : Maybe OrderId -> (Order -> Order) -> Model -> Model
-updateOrder orderId update_ model =
-    let
-        update =
-            update_ >> fixOrderStatus
-    in
-        case orderId of
-            Just orderId ->
-                { model | orders = List.updateIf (\o -> o.id == orderId) update model.orders }
-
-            Nothing ->
-                { model | orders = (update (defaultOrder model)) :: model.orders }
-
-
-defaultOrder : Model -> Order
-defaultOrder model =
-    let
-        maxId =
-            model.orders
-                |> List.map (.id >> unOrderId)
-                |> List.maximum
-                |> Maybe.withDefault 0
-
-        newOrderId =
-            OrderId (maxId + 1)
-    in
-        { id = newOrderId
-        , place =
-            { name = ""
-            , link = ""
-            , description = ""
-            }
-        , status = Proposed
-        , positions = []
-        }
-
-
-updatePosition : OrderId -> Position -> Model -> Model
-updatePosition orderId position =
-    updateOrder (Just orderId)
-        (\order ->
-            case List.findIndex (\p -> p.participant.id == position.participant.id) order.positions of
-                Just idx ->
-                    { order | positions = List.setAt idx position order.positions }
-
-                Nothing ->
-                    { order | positions = position :: order.positions }
-        )
-
-
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.batch
         [ SyncAPI.sync FullSync
         , SyncAPI.order SyncOrder
