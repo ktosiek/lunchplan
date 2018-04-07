@@ -1,9 +1,9 @@
 module View exposing (view, orderCard)
 
-import Html exposing (Html, div, program, text)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (href)
 import Html.Events exposing (onClick)
-import Dict exposing (Dict)
+import Dict
 import Dict.Extra as Dict
 import Maybe.Extra as Maybe
 import Bootstrap.CDN as CDN
@@ -16,9 +16,9 @@ import Bootstrap.Grid.Col as Col
 import Bootstrap.Navbar as Navbar
 import Bootstrap.Utilities.Spacing as Spacing
 import Bootstrap.Utilities.Flex as Flex
-import Model exposing (..)
-import Types exposing (..)
-import Utils exposing (..)
+import Model exposing (Model, Msg(..))
+import Types exposing (Order, OrderId, OrderStatus(..), allOrderStatuses, Position, Participant)
+import Utils exposing (appendIf)
 import PositionForm
 import OrderForm
 
@@ -42,13 +42,13 @@ view model =
                 [ Navbar.textItem [] [ text model.user.name ]
                 ]
             |> Navbar.view model.navbar
+        , forkMe
         ]
-            ++ [ forkMe ]
             ++ (model.orders
                     |> groupOrdersByStatus
                     |> List.map (orderCardLane model)
                )
-            ++ [ cardsList model [ newOrderCard model ]
+            ++ [ cardsList [ newOrderCard model ]
                ]
 
 
@@ -111,12 +111,12 @@ orderCardLane : CardContext a -> ( OrderStatus, List Order ) -> Html Msg
 orderCardLane model ( status, orders ) =
     div []
         [ Html.h3 [] [ text (statusName status) ]
-        , orders |> List.map (orderCard model) |> cardsList model
+        , orders |> List.map (orderCard model) |> cardsList
         ]
 
 
-cardsList : CardContext a -> List (Card.Config Msg) -> Html Msg
-cardsList model cards =
+cardsList : List (Card.Config Msg) -> Html Msg
+cardsList cards =
     Grid.containerFluid []
         [ cards
             |> List.map
@@ -134,7 +134,7 @@ newOrderCard model =
         |> Card.headerH4 [] [ text "Zaproponuj kolejne miejsce:" ]
         |> (case model.orderForm.orderId of
                 -- Inne zamówienie jest już edytowane
-                Just orderId ->
+                Just _ ->
                     Card.block []
                         [ Block.text [] [ text "Zakończ edycję przed dodaniem nowego wpisu" ]
                         ]
