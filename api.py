@@ -69,6 +69,33 @@ async def redirect_to_app(request):
     return web.HTTPFound(f'http://{bare_host}:3000/')
 
 
+@routes.get("/admin")
+async def admin_form(request, *, message=""):
+    return web.Response(
+        content_type="text/html",
+        charset="utf-8",
+        body=f"""
+            <html><body><form method="post">
+            {message}
+            <button name="action" value="flush">Usuń wszystko</button>
+            </form></body></html>""")
+
+
+@routes.post("/admin")
+async def admin_action(request):
+    action = (await request.post())['action']
+    if action == "flush":
+        await flush_data()
+        return await admin_form(request, message="Baza danych została wyczyszczona")
+    else:
+        return await admin_form(request, message=f"Nieznana komenda {action}")
+
+
+async def flush_data():
+    r.flushall()
+    for sid in list(users.keys()):
+        await full_sync(sid)
+
 _last_order_id = max(
     (int(k.split(b':')[-1])
      for k in r.keys(b'order:*')),
